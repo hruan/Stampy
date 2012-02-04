@@ -1,15 +1,15 @@
-import sys, os, getopt, fnmatch, codecs
+import sys, os, fnmatch, codecs, argparse
 from itertools import chain
 from zipfile import ZipFile, ZIP_DEFLATED
 
+def flatten(iterable):
+    return list(chain(*iterable))
+
 def make_file_list(args, dirname, names):
-    def flatten(iterable):
-        return list(chain(*iterable))
+    file_list, exclude = args
 
-    files, ffilter = args
-
-    # Match names against each line of ffilter then flatten the result
-    ignored = flatten([fnmatch.filter(names, x) for x in ffilter])
+    # Match names against each line of exclude then flatten the result
+    ignored = flatten([fnmatch.filter(names, x) for x in exclude])
 
     # Remove ignored files from the walk
     if len(ignored) > 0:
@@ -17,72 +17,65 @@ def make_file_list(args, dirname, names):
             if n in ignored: del names[names.index(n)]
 
     # Record files that aren't directories
-    files[dirname] = [n for n in names if not os.path.isdir(os.path.join(dirname, n))]
+    file_list[dirname] = [n for n in names if not os.path.isdir(os.path.join(dirname, n))]
 
-def prepend_files(header, files, target):
+def prepend_files(header, file_list, targets):
     with codecs.open(header, 'r', 'utf-8-sig') as h: head = h.read()
-    for path, files in files.iteritems():
-        for f in fnmatch.filter(files, target):
-            fp = os.path.join(path, f)
+    for path, files in file_list.iteritems():
+        for f in flatten([fnmatch.filter(files, t) for t in targets]):
+            fp = os.path.relpath(os.path.join(path, f))
             print "Prepending header to", fp
             with codecs.open(fp, 'r+', 'utf-8-sig') as tf:
                 orig = tf.read()
                 tf.seek(0)
                 tf.write(head + orig)
 
-def process(path, header, ffilter, target):
-    files = {}
+def process(dir, file, exclude, targets, compress, prepend):
+    file_list = {}
+
+    # Make sure we use absolute path since zip file name might depend on basename
+    dir = os.path.abspath(dir)
 
     # Some programs apparently always prepend content with BOM ...
-    with codecs.open(ffilter, 'r', 'utf-8-sig') as f:
-        ffilter = [l.rstrip(os.linesep + os.path.sep) for l in f.readlines()]
+    with codecs.open(exclude, 'r', 'utf-8-sig') as f:
+        exclude = [l.rstrip(os.linesep + os.path.sep) for l in f.readlines()]
 
-    os.path.walk(path, make_file_list, (files, ffilter))
+    os.path.walk(dir, make_file_list, (file_list, exclude))
 
-    # Add header to files
-    prepend_files(header, files, target)
+    # Add file to files
+    if prepend == 'yes': prepend_files(file, file_list, targets)
 
     # Zip it up!
-    with ZipFile(os.path.basename(path) + '.zip', 'w', ZIP_DEFLATED) as zf:
-        for k, v in files.iteritems():
-            map(lambda f: zf.write(os.path.join(os.path.relpath(k), f)), v)
+    if compress == 'yes':
+        fp = os.path.basename(dir) + '.zip'
+        with ZipFile(fp, 'w', ZIP_DEFLATED) as zf:
+            for path, files in file_list.iteritems():
+                map(lambda f: zf.write(os.path.join(os.path.relpath(path), f)), files)
 
-        print "Created", path + '.zip'
-
-def show_help():
-    help_text = """
-    Pretty file string will
-    appear here.
-    """
-
-    print help_text
+            print "Created", fp
 
 def main(argv):
-    path = ffilter = header = target = None
+    parser = argparse.ArgumentParser(description='''Add a header to files and
+            zip them up.''')
+    parser.add_argument('-e', '--exclude',
+            default='exclude.txt', metavar='FILE',
+            help='a file containing globs to be excluded from processing; defaults to "exclude.txt"')
+    parser.add_argument('-f', '--file',
+            default='header.txt', metavar='FILE',
+            help='a file whose contents will be prepended to target files; defaults to "header.txt"')
+    parser.add_argument('-c', '--compress',
+            choices=['yes', 'no'], default='yes',
+            help='compress non-excluded files into a .zip file; defaults to "yes"')
+    parser.add_argument('-p', '--prepend',
+            choices=['yes', 'no'], default='yes',
+            help='whether header should be prepended or not; defaults to "yes"')
+    parser.add_argument('dir',
+            help='directory in which to search for target files')
+    parser.add_argument('targets', nargs='+',
+            help='files to target, e.g. "*.cs" or "*.c *.h"')
 
-    try:
-        opts, args = getopt.getopt(argv, 'p:f:h:t:', ['target', 'header', 'path', 'filter'])
-        for opt, arg in opts:
-            if opt in ('-p', '--path'):
-                # Needs to be abspath as we use basename to name the zip file
-                path = os.path.abspath(arg)
-            elif opt in ('-f', '--filter'):
-                ffilter = arg
-            elif opt in ('-h', '--header'):
-                header = arg
-            elif opt in ('-t', '--target'):
-                target = arg
-            else:
-                assert False, 'unknown option'
-
-        if not None in (path, ffilter, header):
-            process(path, header, ffilter, target)
-        else: show_help()
-    except getopt.GetoptError, err:
-        print str(err)
-        show_help()
-        sys.exit(1)
+    process(**vars(parser.parse_args()))
 
 if __name__ == '__main__':
-    main(sys.argv[1:]) if sys.argv > 1 else show_help()
+    main(sys.argv)
 
