@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 import sys, os, fnmatch, codecs, argparse
 from itertools import chain
 from zipfile import ZipFile, ZIP_DEFLATED
