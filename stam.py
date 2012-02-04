@@ -13,9 +13,8 @@ def make_file_list(args, dirname, names):
     ignored = flatten([fnmatch.filter(names, x) for x in exclude])
 
     # Remove ignored files from the walk
-    if len(ignored) > 0:
-        for n in ignored:
-            if n in names: del names[names.index(n)]
+    for n in ignored:
+        if n in names: del names[names.index(n)]
 
     # Record files that aren't directories
     file_list[dirname] = [n for n in names if not os.path.isdir(os.path.join(dirname, n))]
@@ -34,7 +33,7 @@ def prepend_files(header, file_list, targets):
 def process(dir, file, exclude, targets, compress, prepend):
     file_list = {}
 
-    # Make sure we use absolute path since zip file name might depend on basename
+    # Make sure we use absolute path since zip filename depends on basename
     dir = os.path.abspath(dir)
 
     # Some programs apparently always prepend content with BOM ...
