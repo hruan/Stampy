@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 import sys, os, fnmatch, codecs, argparse
+from os.path import join, relpath
 from itertools import chain
 from zipfile import ZipFile, ZIP_DEFLATED
 
@@ -9,26 +10,33 @@ def flatten(iterable):
 def make_file_list(args, dirname, names):
     file_list, exclude = args
 
-    # Match names against each line of exclude then flatten the result
-    ignored = flatten([fnmatch.filter(names, x) for x in exclude])
-
-    # Remove ignored files from the walk
-    for n in ignored:
+    # Match names against each line of exclude then flatten the result then
+    # remove them from the walk
+    for n in flatten([fnmatch.filter(names, x) for x in exclude]):
         if n in names: del names[names.index(n)]
 
     # Record files that aren't directories
-    file_list[dirname] = [n for n in names if not os.path.isdir(os.path.join(dirname, n))]
+    file_list[dirname] = [n for n in names if not os.path.isdir(join(dirname, n))]
 
 def prepend_files(header, file_list, targets):
     with codecs.open(header, 'r', 'utf-8-sig') as h: head = h.read()
+
     for path, files in file_list.iteritems():
+        # Find targets in files and prepend the header
         for f in flatten([fnmatch.filter(files, t) for t in targets]):
-            fp = os.path.relpath(os.path.join(path, f))
+            fp = relpath(join(path, f))
             print "Prepending header to", fp
             with codecs.open(fp, 'r+', 'utf-8-sig') as tf:
                 orig = tf.read()
                 tf.seek(0)
                 tf.write(head + orig)
+
+def compress_files(file_list, zipfile):
+    with ZipFile(zipfile, 'w', ZIP_DEFLATED) as zf:
+        for path, files in file_list.iteritems():
+            map(lambda f: zf.write(join(relpath(path), f)), files)
+
+        print "Created", zipfile
 
 def process(dir, file, exclude, targets, compress, prepend):
     file_list = {}
@@ -46,13 +54,7 @@ def process(dir, file, exclude, targets, compress, prepend):
     if prepend == 'yes': prepend_files(file, file_list, targets)
 
     # Zip it up!
-    if compress == 'yes':
-        fp = os.path.basename(dir) + '.zip'
-        with ZipFile(fp, 'w', ZIP_DEFLATED) as zf:
-            for path, files in file_list.iteritems():
-                map(lambda f: zf.write(os.path.join(os.path.relpath(path), f)), files)
-
-            print "Created", fp
+    if compress == 'yes': compress_files(file_list, os.path.basename(dir) + '.zip')
 
 def main(argv):
     parser = argparse.ArgumentParser(description='''Add a header to files and
