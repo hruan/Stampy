@@ -13,8 +13,8 @@ def make_file_list(args, dirname, names):
 
     # Remove ignored files from the walk
     if len(ignored) > 0:
-        for n in names:
-            if n in ignored: del names[names.index(n)]
+        for n in ignored:
+            if n in names: del names[names.index(n)]
 
     # Record files that aren't directories
     file_list[dirname] = [n for n in names if not os.path.isdir(os.path.join(dirname, n))]
