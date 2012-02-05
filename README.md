@@ -9,8 +9,7 @@ this by hand Stampy was created.
 Python 2.7.x is required to run Stampy.
 
 # Usage
-    python stam.py [-e _exclude_] [-f _file_] [-c {yes,no}]
-                   [-p {yes,no}] _dir_ [_target_ [_target_ ...]]
+    python stam.py [-e exclude] [-f file] [-c {yes,no}] [-p {yes,no}] dir [target [target ...]]
 
 Stampy will prepend the contents of _file_ to each _target_ in
 directory _dir_ unless they are listed in the _exclude_ file.
@@ -61,6 +60,5 @@ project you might do
 which will prepend the respective headers to HTML, CSS and JavaScript
 files and create a zip.
 
-# Links
 [0]: http://docs.python.org/library/fnmatch.html?highlight=fnmatch#fnmatch
 
