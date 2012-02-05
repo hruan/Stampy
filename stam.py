@@ -38,7 +38,7 @@ def compress_files(file_list, zipfile):
 
         print "Created", zipfile
 
-def process(dir, file, exclude, targets, compress, prepend):
+def process(dir, file, exclude, target, compress, prepend):
     file_list = {}
 
     # Make sure we use absolute path since zip filename depends on basename
@@ -51,7 +51,7 @@ def process(dir, file, exclude, targets, compress, prepend):
     os.path.walk(dir, make_file_list, (file_list, exclude))
 
     # Add file to files
-    if prepend == 'yes': prepend_files(file, file_list, targets)
+    if prepend == 'yes': prepend_files(file, file_list, target)
 
     # Zip it up!
     if compress == 'yes': compress_files(file_list, os.path.basename(dir) + '.zip')
@@ -60,20 +60,20 @@ def main(argv):
     parser = argparse.ArgumentParser(description='''Add a header to files and
             zip them up.''')
     parser.add_argument('-e', '--exclude',
-            default='exclude.txt', metavar='FILE',
+            default='exclude.txt', metavar='EXCLUDE',
             help='a file containing globs to be excluded from processing; defaults to "exclude.txt"')
     parser.add_argument('-f', '--file',
             default='header.txt', metavar='FILE',
             help='a file whose contents will be prepended to target files; defaults to "header.txt"')
     parser.add_argument('-c', '--compress',
             choices=['yes', 'no'], default='yes',
-            help='compress non-excluded files into a .zip file; defaults to "yes"')
+            help='compress non-excluded files into a zip-file; defaults to "yes"')
     parser.add_argument('-p', '--prepend',
             choices=['yes', 'no'], default='yes',
-            help='whether header should be prepended or not; defaults to "yes"')
+            help='whether header (FILE) should be prepended to target files; defaults to "yes"')
     parser.add_argument('dir',
             help='directory in which to search for target files')
-    parser.add_argument('targets', nargs='+',
+    parser.add_argument('target', nargs='*',
             help='files to target, e.g. "*.cs" or "*.c *.h"')
 
     process(**vars(parser.parse_args()))
