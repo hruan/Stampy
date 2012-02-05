@@ -22,6 +22,7 @@ that aren't mentioned in the _exclude_ file.  This behavior can be
 turned off using the _-c no_ option.
 
 Example:
+
     python stam.py Assignment-2 *.cs
 
 This will prepend the contents of _header.txt_ to all files ending with
