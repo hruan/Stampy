@@ -16,7 +16,7 @@ def make_file_list(args, dirname, names):
         if n in names: del names[names.index(n)]
 
     # Record files that aren't directories
-    for f in [join(dirname, n) for n in names if not os.path.isdir(join(dirname, n))]:
+    for f in [join(dirname, n) for n in names]:
         file_list.append(f)
 
 def prepend_files(header, file_list, targets):
