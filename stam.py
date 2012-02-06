@@ -16,30 +16,29 @@ def make_file_list(args, dirname, names):
         if n in names: del names[names.index(n)]
 
     # Record files that aren't directories
-    file_list[dirname] = [n for n in names if not os.path.isdir(join(dirname, n))]
+    for f in [join(dirname, n) for n in names if not os.path.isdir(join(dirname, n))]:
+        file_list.append(f)
 
 def prepend_files(header, file_list, targets):
     with codecs.open(header, 'r', 'utf-8-sig') as h: head = h.read()
 
-    for path, files in file_list.iteritems():
-        # Find targets in files and prepend the header
-        for f in flatten([fnmatch.filter(files, t) for t in targets]):
-            fp = relpath(join(path, f))
-            print "Prepending header to", fp
-            with codecs.open(fp, 'r+', 'utf-8-sig') as tf:
-                orig = tf.read()
-                tf.seek(0)
-                tf.write(head + orig)
+    # Find targets in files and prepend the header
+    for f in flatten([fnmatch.filter(file_list, t) for t in targets]):
+        print "Prepending header to", relpath(f)
+        with codecs.open(f, 'r+', 'utf-8-sig') as tf:
+            orig = tf.read()
+            tf.seek(0)
+            tf.write(head + orig)
 
 def compress_files(file_list, zipfile):
     with ZipFile(zipfile, 'w', ZIP_DEFLATED) as zf:
-        for path, files in file_list.iteritems():
-            map(lambda f: zf.write(join(relpath(path), f)), files)
+        for f in file_list:
+            zf.write(relpath(f))
 
         print "Created", zipfile
 
 def process(dir, file, exclude, target, compress, prepend):
-    file_list = {}
+    file_list = []
 
     # Make sure we use absolute path since zip filename depends on basename
     dir = os.path.abspath(dir)
