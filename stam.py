@@ -15,7 +15,7 @@ def make_file_list(args, dirname, names):
     for n in flatten([fnmatch.filter(names, x) for x in exclude]):
         if n in names: del names[names.index(n)]
 
-    # Record files that aren't directories
+    # Record the survivors with full path; to be used later for making the zip
     for f in [join(dirname, n) for n in names]:
         file_list.append(f)
 
@@ -30,12 +30,13 @@ def prepend_files(header, file_list, targets):
             tf.seek(0)
             tf.write(head + orig)
 
-def compress_files(file_list, zipfile):
-    with ZipFile(zipfile, 'w', ZIP_DEFLATED) as zf:
+def compress_files(file_list, parent, zipfile):
+    with ZipFile(zipfile + '.zip', 'w', ZIP_DEFLATED) as zf:
+        os.chdir(parent)
         for f in file_list:
             zf.write(relpath(f))
 
-        print "Created", zipfile
+        print "Created %s.zip" % zipfile
 
 def process(dir, file, exclude, target, compress, prepend):
     file_list = []
@@ -48,12 +49,8 @@ def process(dir, file, exclude, target, compress, prepend):
         exclude = [l.rstrip(os.linesep + os.path.sep) for l in f.readlines()]
 
     os.path.walk(dir, make_file_list, (file_list, exclude))
-
-    # Add file to files
     if prepend == 'yes': prepend_files(file, file_list, target)
-
-    # Zip it up!
-    if compress == 'yes': compress_files(file_list, os.path.basename(dir) + '.zip')
+    if compress == 'yes': compress_files(file_list, *os.path.split(dir))
 
 def main(argv):
     parser = argparse.ArgumentParser(description='''Add a header to files and
@@ -75,7 +72,10 @@ def main(argv):
     parser.add_argument('target', nargs='*',
             help='files to target, e.g. "*.cs" or "*.c *.h"')
 
+    # Make sure we end up in the same working directory after processing
+    cwd = os.getcwd()
     process(**vars(parser.parse_args()))
+    os.chdir(cwd)
 
 if __name__ == '__main__':
     main(sys.argv)
