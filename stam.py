@@ -25,10 +25,13 @@ def prepend_files(header, file_list, targets):
     # Find targets in files and prepend the header
     for f in flatten([fnmatch.filter(file_list, t) for t in targets]):
         print "Prepending header to", relpath(f)
-        with codecs.open(f, 'r+', 'utf-8-sig') as tf:
-            orig = tf.read()
-            tf.seek(0)
-            tf.write(head + orig)
+        try:
+            with codecs.open(f, 'r+', ENCODING) as tf:
+                orig = tf.read()
+                tf.seek(0)
+                tf.write(head + orig)
+        except UnicodeDecodeError:
+            sys.exit("Uhoh, %s couldn't be read.  Make sure it's encoded as UTF-8." % f)
 
 def compress_files(file_list, parent, zipfile):
     with ZipFile(zipfile + '.zip', 'w', ZIP_DEFLATED) as zf:
