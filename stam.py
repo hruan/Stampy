@@ -56,8 +56,7 @@ def process(dir, file, exclude, target, compress, prepend):
     if compress == 'yes': compress_files(file_list, *os.path.split(dir))
 
 def main(argv):
-    parser = argparse.ArgumentParser(description='''Add a header to files and
-            zip them up.''')
+    parser = argparse.ArgumentParser(description='Add a header to files and zip them up.')
     parser.add_argument('-e', '--exclude',
             default='exclude.txt', metavar='EXCLUDE',
             help='a file containing globs to be excluded from processing; defaults to "exclude.txt"')
