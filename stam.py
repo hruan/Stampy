@@ -4,6 +4,8 @@ from os.path import join, relpath
 from itertools import chain
 from zipfile import ZipFile, ZIP_DEFLATED
 
+ENCODING = 'utf-8-sig'
+
 def flatten(iterable):
     return list(chain(*iterable))
 
@@ -20,7 +22,7 @@ def make_file_list(args, dirname, names):
         file_list.append(f)
 
 def prepend_files(header, file_list, targets):
-    with codecs.open(header, 'r', 'utf-8-sig') as h: head = h.read()
+    with codecs.open(header, 'r', ENCODING) as h: head = h.read()
 
     # Find targets in files and prepend the header
     for f in flatten([fnmatch.filter(file_list, t) for t in targets]):
@@ -48,7 +50,7 @@ def process(dir, file, exclude, target, compress, prepend):
     dir = os.path.abspath(dir)
 
     # Some programs apparently always prepend content with BOM ...
-    with codecs.open(exclude, 'r', 'utf-8-sig') as f:
+    with codecs.open(exclude, 'r', ENCODING) as f:
         exclude = [l.rstrip(os.linesep + os.path.sep) for l in f.readlines()]
 
     os.path.walk(dir, make_file_list, (file_list, exclude))
@@ -81,4 +83,3 @@ def main(argv):
 
 if __name__ == '__main__':
     main(sys.argv)
-
