@@ -43,7 +43,7 @@ def compress_files(file_list, parent, zipfile):
 
         print "Created %s.zip" % zipfile
 
-def process(dir, file, exclude, target, compress, prepend):
+def process(dir, header, exclude, target, compress, prepend):
     file_list = []
 
     # Make sure we use absolute path since zip filename depends on basename
@@ -54,23 +54,29 @@ def process(dir, file, exclude, target, compress, prepend):
         exclude = [l.rstrip(os.linesep + os.path.sep) for l in f.readlines()]
 
     os.path.walk(dir, make_file_list, (file_list, exclude))
-    if prepend == 'yes': prepend_files(file, file_list, target)
-    if compress == 'yes': compress_files(file_list, *os.path.split(dir))
+    if prepend: prepend_files(header, file_list, target)
+    if compress: compress_files(file_list, *os.path.split(dir))
 
 def main(argv):
     parser = argparse.ArgumentParser(description='Add a header to files and zip them up.')
-    parser.add_argument('-e', '--exclude',
-            default='exclude.txt', metavar='EXCLUDE',
-            help='a file containing globs to be excluded from processing; defaults to "exclude.txt"')
-    parser.add_argument('-f', '--file',
-            default='header.txt', metavar='FILE',
-            help='a file whose contents will be prepended to target files; defaults to "header.txt"')
-    parser.add_argument('-c', '--compress',
-            choices=['yes', 'no'], default='yes',
-            help='compress non-excluded files into a zip-file; defaults to "yes"')
-    parser.add_argument('-p', '--prepend',
-            choices=['yes', 'no'], default='yes',
-            help='whether header (FILE) should be prepended to target files; defaults to "yes"')
+
+    parser.add_argument('--exclude', default='exclude.txt', metavar='EXCLUDE_FILE',
+        help='a file containing globs to be excluded from processing; default: %(default)s')
+    parser.add_argument('--header', default='header.txt', metavar='HEADER_FILE',
+        help='a file whose contents will be prepended to target files; default: %(default)s')
+
+    compress = parser.add_mutually_exclusive_group(required=True)
+    compress.add_argument('--compress', action='store_true',
+        help='compress non-excluded files into a zip-file')
+    compress.add_argument('--nocompress', action='store_false', dest='compress',
+        help='do not compress non-excluded files into a zip-file')
+
+    prepend = parser.add_mutually_exclusive_group(required=True)
+    prepend.add_argument('--prepend', action='store_true',
+        help='prepended header to target files')
+    prepend.add_argument('--noprepend', action='store_false', dest='prepend',
+        help='do not prepend header to target files')
+
     parser.add_argument('dir',
             help='directory in which to search for target files')
     parser.add_argument('target', nargs='*',
